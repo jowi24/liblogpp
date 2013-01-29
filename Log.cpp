@@ -23,6 +23,8 @@
 
 #include "CustomLogStream.h"
 
+#include <sstream>
+
 namespace logger {
 
 std::mutex    Log::mutex;
