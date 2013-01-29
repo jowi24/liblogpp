@@ -1,7 +1,7 @@
 /*
- * libfritz++
+ * liblog++
  *
- * Copyright (C) 2007-2013 Joachim Wilke <libfritz@joachim-wilke.de>
+ * Copyright (C) 2007-2013 Joachim Wilke <liblog@joachim-wilke.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,44 +18,44 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+
 #ifndef LOG_H_
 #define LOG_H_
 
-#include <sstream>
 #include <iostream>
 #include <mutex>
+#include <memory>
 
-namespace fritz {
+#include "CustomLogStream.h"
+
+namespace logger {
 
 class Log {
 private:
-	std::mutex    mutex;
-	std::string   prefix = "libfritz++";
-	std::ostream *dstream = &std::cout;
-	std::ostream *estream = &std::cerr;
-	std::ostream *istream = &std::cout;
+	typedef std::unique_ptr<std::ostream> ostreamPtr;
 
-	std::string getLocator(std::string file, int line) const;
-	void        putLogMessage(const std::ostream &message, std::ostream *stream, std::string file, int line);
+	static std::mutex  mutex;
+	static std::string prefix;
+	static ostreamPtr  dstream;
+	static ostreamPtr  estream;
+	static ostreamPtr  istream;
 
-protected:
-	std::string getPrefix() const             { return prefix;         }
-	void        setPrefix(std::string prefix) { this->prefix = prefix; }
+	static std::string getLocator(std::string file, int line);
+	static void        putLogMessage(const std::ostream &message, std::ostream &stream, std::string file, int line);
 
 public:
-	void dlog(const std::ostream &message, std::string file, int line);
-	void elog(const std::ostream &message, std::string file, int line);
-	void ilog(const std::ostream &message, std::string file, int line);
+	static void debug(const std::ostream &message, std::string file, int line);
+	static void error(const std::ostream &message, std::string file, int line);
+	static void info(const std::ostream &message, std::string file, int line);
 
-	void setLogStreams(std::ostream *elog, std::ostream *ilog, std::ostream *dlog);
+	static void setLogStreams(ostreamPtr &&elog, ostreamPtr &&ilog, ostreamPtr &&dlog);
+	static void setPrefix(const std::string &prefix) { Log::prefix = prefix + " - "; }
+	static void setCustomLogger(customLogFunction logError, customLogFunction logInfo, customLogFunction logDebug);
 };
 
-extern Log log;
+#define DBG(x) {logger::Log::debug(std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
+#define INF(x) {logger::Log::info (std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
+#define ERR(x) {logger::Log::error(std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
 
-#define DBG(x) {::fritz::log.dlog(std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
-#define INF(x) {::fritz::log.ilog(std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
-#define ERR(x) {::fritz::log.elog(std::stringstream().flush() << x, std::string(__FILE__), __LINE__);}
-
-
-} /* namespace fritz */
+}
 #endif /* LOG_H_ */

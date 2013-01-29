@@ -1,7 +1,7 @@
 /*
- * libfritz++
+ * liblog++
  *
- * Copyright (C) 2007-2013 Joachim Wilke <libfritz@joachim-wilke.de>
+ * Copyright (C) 2007-2013 Joachim Wilke <liblog@joachim-wilke.de>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,41 +21,61 @@
 
 #include "Log.h"
 
-namespace fritz {
+#include "CustomLogStream.h"
 
-Log log;
+namespace logger {
 
-std::string Log::getLocator(std::string file, int line) const {
+std::mutex    Log::mutex;
+std::string   Log::prefix;
+Log::ostreamPtr Log::dstream = nullptr;
+Log::ostreamPtr Log::estream = nullptr;;
+Log::ostreamPtr Log::istream = nullptr;;
+
+std::string Log::getLocator(std::string file, int line) {
 	std::stringstream ss;
-	ss << "[" << getPrefix() << "/" <<
-			std::string(file, file.rfind('/') == std::string::npos ?
-				 	          0 : file.rfind('/')+1, std::string::npos )
+	size_t start = file.rfind('/') == std::string::npos ? 0 : file.rfind('/') + 1;
+	ss << "[" << prefix << std::string(file, start, std::string::npos)
 	   << ":" << line << "] ";
 	return ss.str();
 }
 
-void Log::putLogMessage(const std::ostream &message, std::ostream *stream, std::string file, int line) {
+void Log::putLogMessage(const std::ostream &message, std::ostream &stream, std::string file, int line) {
 	mutex.lock();
-	*stream << getLocator(file, line) << message.rdbuf() << std::endl;
+	stream << getLocator(file, line) << message.rdbuf() << std::endl;
 	mutex.unlock();
 }
 
-void Log::dlog(const std::ostream &message, std::string file, int line) {
-	putLogMessage(message, dstream, file, line);
+void Log::debug(const std::ostream &message, std::string file, int line) {
+	if (dstream)
+		putLogMessage(message, *dstream, file, line);
+	else
+		putLogMessage(message, std::clog, file, line);
 }
 
-void Log::elog(const std::ostream &message, std::string file, int line) {
-	putLogMessage(message, estream, file, line);
+void Log::error(const std::ostream &message, std::string file, int line) {
+	if (estream)
+		putLogMessage(message, *estream, file, line);
+	else
+		putLogMessage(message, std::cerr, file, line);
 }
 
-void Log::ilog(const std::ostream &message, std::string file, int line) {
-	putLogMessage(message, istream, file, line);
+void Log::info(const std::ostream &message, std::string file, int line) {
+	if (istream)
+		putLogMessage(message, *istream, file, line);
+	else
+		putLogMessage(message, std::cout, file, line);
 }
 
-void Log::setLogStreams(std::ostream *elog, std::ostream *ilog, std::ostream *dlog) {
-	estream = elog;
-	istream = ilog;
-	dstream = dlog;
+void Log::setLogStreams(Log::ostreamPtr &&elog, Log::ostreamPtr &&dlog, Log::ostreamPtr &&ilog) {
+	estream = std::move(elog);
+	istream = std::move(ilog);
+	dstream = std::move(dlog);
+}
+
+void Log::setCustomLogger(customLogFunction logError, customLogFunction logInfo, customLogFunction logDebug) {
+	setLogStreams(std::unique_ptr<CustomLogStream>(new CustomLogStream(logError)),
+			      std::unique_ptr<CustomLogStream>(new CustomLogStream(logInfo)),
+				  std::unique_ptr<CustomLogStream>(new CustomLogStream(logDebug)));
 }
 
 } /* namespace fritz */
