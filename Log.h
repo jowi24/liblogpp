@@ -25,6 +25,7 @@
 #include <iostream>
 #include <mutex>
 #include <memory>
+#include <sstream>
 
 #include "CustomLogStream.h"
 
