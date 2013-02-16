@@ -30,8 +30,8 @@ namespace logger {
 std::mutex    Log::mutex;
 std::string   Log::prefix;
 Log::ostreamPtr Log::dstream = nullptr;
-Log::ostreamPtr Log::estream = nullptr;;
-Log::ostreamPtr Log::istream = nullptr;;
+Log::ostreamPtr Log::estream = nullptr;
+Log::ostreamPtr Log::istream = nullptr;
 
 std::string Log::getLocator(std::string file, int line) {
 	std::stringstream ss;
